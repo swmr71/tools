@@ -3,23 +3,64 @@ import json
 import subprocess
 import websockets
 
-# サンドボックス用のエンドポイント
 SANDBOX_URL = "wss://api-realtime-sandbox.p2pquake.net/v2/ws"
-# 先ほどテストした音源のパス
-ALERT_SOUND_PATH = "./test.mp3"
+
+# 音声モデルのパス
+VOICE_PATH = "/usr/share/hts-voice/nitech_jp_atr503.htsvoice"
 
 
-def play_alert_sound():
-    print("【発火】緊急地震速報（警報）を検知！スピーカーからアラート音を再生します。")
-    # バックグラウンドで音を鳴らす（スクリプトの処理を止めないため）
-    subprocess.Popen(["mpg123", "-q", ALERT_SOUND_PATH])
+def scale_to_str(scale_int):
+    """P2P地震情報の震度コードを日本語の文字列に変換する"""
+    scale_map = {
+        10: "1",
+        20: "2",
+        30: "3",
+        40: "4",
+        45: "5弱",
+        50: "5強",
+        55: "6弱",
+        60: "6強",
+        70: "7",
+    }
+    return scale_map.get(scale_int, "不明")
+
+
+def speak_text(text):
+    """受け取ったテキストをOpen JTalkで音声合成して再生する"""
+    print(f"【読み上げ】 {text}")
+
+    # Open JTalkのコマンドを組み立てて実行
+    # パイプを使ってテキストを渡し、一時ファイルを作らずにaplayで直接鳴らす
+    cmd = f'echo "{text}" | open_jtalk -x /var/lib/mecab/dic/openjtalk-mecab-naist-jdic -m {VOICE_PATH} -ow /dev/stdout | aplay -q'
+
+    # シェル経由で実行
+    subprocess.Popen(cmd, shell=True)
+
+
+def parse_and_speak_551(data):
+    """Code: 551 (地震情報) から読み上げ用テキストを生成する"""
+    earthquake = data.get("earthquake", {})
+    hypocenter = earthquake.get("hypocenter", {})
+
+    # 必要な情報を抽出
+    place = hypocenter.get("name", "不明な震源")
+    max_scale_code = earthquake.get("maxScale", 0)
+    max_scale = scale_to_str(max_scale_code)
+
+    if max_scale == "不明":
+        # 震度情報がない場合は処理スキップ（震源のみの速報など）
+        return
+
+    # 読み上げ文章の作成
+    text = f"地震情報です。先ほど、{place}を震源とする地震がありました。最大震度は、{max_scale}です。"
+    speak_text(text)
 
 
 async def monitor_sandbox():
     print(f"サンドボックス ({SANDBOX_URL}) に接続します...")
 
     async with websockets.connect(SANDBOX_URL) as websocket:
-        print("接続成功！データの受信を待機しています（約30秒間隔）...")
+        print("接続成功！データの受信を待機しています...")
 
         while True:
             try:
@@ -31,10 +72,10 @@ async def monitor_sandbox():
 
                 print(f"[{msg_time}] データ受信 - Code: {code}")
 
-                # 554: 緊急地震速報（警報）が来たら音を鳴らす
+                # 551: 地震情報が来たらパースして読み上げる
                 if code in [551, 554]:
-                    print("★対象のコードを検知しました！")
-                    play_alert_sound()
+                    print("★地震情報を検知しました。パースを開始します。")
+                    parse_and_speak_551(data)
 
             except websockets.ConnectionClosed:
                 print("接続が切断されました。再接続します...")
