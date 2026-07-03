@@ -31,7 +31,7 @@ def speak_text(text):
 
     # Open JTalkのコマンドを組み立てて実行
     # パイプを使ってテキストを渡し、一時ファイルを作らずにaplayで直接鳴らす
-    cmd = f'echo "{text}" | open_jtalk -x /var/lib/mecab/dic/openjtalk-mecab-naist-jdic -m {VOICE_PATH} -ow /dev/stdout | aplay -q'
+    cmd = f'echo "{text}" | open_jtalk -x ⁠/var/lib/mecab/dic/open-jtalk/naist-jdic -m {VOICE_PATH} -ow /dev/stdout | aplay -q'
 
     # シェル経由で実行
     subprocess.Popen(cmd, shell=True)
