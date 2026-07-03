@@ -6,7 +6,7 @@ import websockets
 SANDBOX_URL = "wss://api-realtime-sandbox.p2pquake.net/v2/ws"
 
 # 音声モデルのパス
-VOICE_PATH = "/usr/share/hts-voice/nitech_jp_atr503.htsvoice"
+VOICE_PATH = "/usr/share/hts-voice/mei/mei_normal.htsvoice"
 
 
 def scale_to_str(scale_int):
