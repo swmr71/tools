@@ -29,9 +29,9 @@ def speak_text(text):
     """受け取ったテキストをOpen JTalkで音声合成して再生する"""
     print(f"【読み上げ】 {text}")
 
-    # Open JTalkのコマンドを組み立てて実行
+    # 特殊文字を排除した正しいコマンド（open_jtalkのアンダースコア版）
     # パイプを使ってテキストを渡し、一時ファイルを作らずにaplayで直接鳴らす
-    cmd = f'echo "{text}" | open_jtalk -x ⁠/var/lib/mecab/dic/open-jtalk/naist-jdic -m {VOICE_PATH} -ow /dev/stdout | aplay -q'
+    cmd = f'echo "{text}" | open_jtalk -x /var/lib/mecab/dic/open-jtalk/naist-jdic -m {VOICE_PATH} -ow /dev/stdout | aplay -q'
 
     # シェル経由で実行
     subprocess.Popen(cmd, shell=True)
@@ -48,7 +48,7 @@ def parse_and_speak_551(data):
     max_scale = scale_to_str(max_scale_code)
 
     if max_scale == "不明":
-        # 震度情報がない場合は処理スキップ（震源のみの速報など）
+        # 震度情報がない場合は処理スキップ
         return
 
     # 読み上げ文章の作成
@@ -73,7 +73,7 @@ async def monitor_sandbox():
                 print(f"[{msg_time}] データ受信 - Code: {code}")
 
                 # 551: 地震情報が来たらパースして読み上げる
-                if code in [551, 554]:
+                if code == 551:
                     print("★地震情報を検知しました。パースを開始します。")
                     parse_and_speak_551(data)
 
