@@ -32,7 +32,7 @@ async def monitor_sandbox():
                 print(f"[{msg_time}] データ受信 - Code: {code}")
 
                 # 554: 緊急地震速報（警報）が来たら音を鳴らす
-                if code == 554:
+                if code in [551, 554]:
                     print("★対象のコードを検知しました！")
                     play_alert_sound()
 
