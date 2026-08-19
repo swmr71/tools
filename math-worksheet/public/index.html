@@ -100,11 +100,12 @@
         background: #fff;
     }
 
-    /* mini-math rendering */
-    .mfrac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; margin: 0 3px; font-size: 0.95em; }
-    .mfrac .num { border-bottom: 1.3px solid #333; padding: 0 4px 1px; }
-    .mfrac .den { padding: 1px 4px 0; }
-    .msqrt { display: inline-flex; align-items: flex-start; margin: 0 2px; }
+    /* mini-math rendering (inline-block, not flex — flex containers force line
+       breaks when the browser copies rendered text as plain text) */
+    .mfrac { display: inline-block; vertical-align: middle; text-align: center; margin: 0 3px; font-size: 0.95em; }
+    .mfrac .num { display: block; border-bottom: 1.3px solid #333; padding: 0 4px 1px; }
+    .mfrac .den { display: block; padding: 1px 4px 0; }
+    .msqrt { display: inline-block; margin: 0 2px; }
     .msqrt .rad { font-size: 1.1em; padding-right: 1px; }
     .msqrt .content { border-top: 1.3px solid #333; padding: 0 3px; }
     sup.mexp, sub.msub { font-size: 0.7em; }
@@ -576,11 +577,24 @@ function renderMathSegment(s) {
                 } else if (cmd === 'sqrt') {
                     const content = readGroup();
                     out += `<span class="msqrt"><span class="rad">&#8730;</span><span class="content">${parseSub(content)}</span></span>`;
+                } else if (cmd === 'text' || cmd === 'mathrm') {
+                    // \text{...} / \mathrm{...}: プレーンテキストとしてそのまま出力（入れ子の数式解釈はしない）
+                    const content = readGroup();
+                    out += escapeHtml(content);
+                } else if (cmd === '') {
+                    // "\°" "\%" "\_" のように、文字を伴わないバックスラッシュは
+                    // LaTeXのエスケープ記法とみなし、バックスラッシュを捨てて次の1文字をそのまま出力する
+                    if (i < s.length) { out += escapeHtml(s[i]); i++; }
                 } else {
                     const symbols = {
                         times: '&times;', div: '&divide;', pm: '&plusmn;', cdot: '&middot;',
                         leq: '&le;', geq: '&ge;', neq: '&ne;', pi: '&pi;', circ: '&deg;',
-                        angle: '&ang;', triangle: '&#9651;', infty: '&infin;', approx: '&asymp;'
+                        angle: '&ang;', triangle: '&#9651;', infty: '&infin;', approx: '&asymp;',
+                        Delta: '&#9651;', delta: '&delta;', theta: '&theta;', Theta: '&Theta;',
+                        alpha: '&alpha;', beta: '&beta;', gamma: '&gamma;', Gamma: '&Gamma;',
+                        phi: '&phi;', omega: '&omega;', lambda: '&lambda;', mu: '&mu;',
+                        cos: 'cos', sin: 'sin', tan: 'tan', log: 'log', ln: 'ln',
+                        left: '', right: '', quad: '&nbsp;&nbsp;', qquad: '&nbsp;&nbsp;&nbsp;&nbsp;'
                     };
                     out += symbols[cmd] !== undefined ? symbols[cmd] : escapeHtml(s.slice(start, i));
                 }
