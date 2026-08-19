@@ -18,14 +18,7 @@ npm start
 
 ## Dockerで動かす
 
-```bash
-cd math-worksheet
-docker compose up --build
-```
-
-`http://localhost:3000` を開く。共有データは `./data`（ホスト側）にマウントされるので、コンテナを再作成してもデータは消えません。
-
-`docker compose` を使わない場合:
+`docker-compose.yml` は GitHub Actions が自動ビルドして push する `ghcr.io/swmr71/math-worksheet:latest` を参照します（後述）。手元のコードをすぐ試したいときはローカルビルド用に上書きしてください:
 
 ```bash
 cd math-worksheet
@@ -33,12 +26,31 @@ docker build -t math-worksheet .
 docker run -p 3000:3000 -v "$(pwd)/data:/app/data" math-worksheet
 ```
 
+公開イメージをそのまま使う場合:
+
+```bash
+cd math-worksheet
+docker compose up -d
+```
+
+`http://localhost:3000` を開く。共有データは `./data`（ホスト側）にマウントされるので、コンテナを再作成してもデータは消えません。
+
+## CI/CD（GitHub Actions → GHCR → Portainer）
+
+`main` ブランチの `math-worksheet/**` に変更がpushされると [.github/workflows/docker-publish.yml](../.github/workflows/docker-publish.yml) が自動でDockerイメージをビルドし、`ghcr.io/swmr71/math-worksheet:latest` にpushします（GHCRパッケージは初回pushのあと手動で **Public** に設定してください。GitHubのリポジトリ → Packages → math-worksheet → Package settings → Change visibility）。
+
+Portainerでは `docker-compose.yml` の `image:` を見てpullするだけなので、コードを更新したいときは:
+1. GitHubにpushする（Actionsのビルド完了を待つ、数分）
+2. Portainerのスタックで「Re-pull image and redeploy」を実行する
+
+これだけで最新化されます。スタックの再作成やSSHでのビルドは不要です。
+
 ## デプロイ（常時アクセスできるようにする場合）
 
 Node.js (`npm start` で起動、`PORT` 環境変数を読む) が動く環境、またはDockerイメージが動く環境ならどこでも動作します。例:
 
 - **Render / Railway / Fly.io（Node.js直接）**: リポジトリを接続し、Root Directory を `math-worksheet` に設定、Build Command は不要（`npm install` は自動）、Start Command は `npm start`
-- **Render / Railway / Fly.io（Docker）**: 上記サービスは `math-worksheet/Dockerfile` を検出してDockerビルドでのデプロイも可能。Root Directory を `math-worksheet` に設定するだけでOK
+- **Render / Railway / Fly.io（Docker）**: `ghcr.io/swmr71/math-worksheet:latest` を指定してデプロイ、または `math-worksheet/Dockerfile` を検出してのビルドデプロイも可能
 - 共有データは `data/*.json` にファイルとして保存されます。永続ディスクがないPaaS（無料プランのRenderなど）ではデプロイ/再起動のたびに消える点に注意してください。永続化したい場合は永続ボリューム（Render Disksなど）を `math-worksheet/data` にマウントするか、外部ストレージ（S3等）に切り替える改修が必要です。
 
 ## API

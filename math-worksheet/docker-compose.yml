@@ -1,6 +1,6 @@
 services:
   math-worksheet:
-    build: .
+    image: ghcr.io/swmr71/math-worksheet:latest
     ports:
       - "3000:3000"
     volumes:
